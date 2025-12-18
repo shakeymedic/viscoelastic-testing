@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEG Master | Emergency Medicine Education</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Slate 50 */
+            color: #1e293b; /* Slate 800 */
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .teg-grid {
+            background-size: 40px 40px;
+            background-image:
+                linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Tabs */
+        .tab-active {
+            border-bottom: 2px solid #2563eb;
+            color: #2563eb;
+            font-weight: 600;
+            background-color: #eff6ff;
+        }
+        .tab-inactive {
+            border-bottom: 2px solid transparent;
+            color: #64748b;
+        }
+        .tab-inactive:hover {
+            color: #334155;
+            background-color: #f8fafc;
+        }
+        
+        /* Quiz Styles */
+        .quiz-option {
+            transition: all 0.2s;
+            border: 2px solid #e2e8f0;
+        }
+        .quiz-option:hover {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+        .quiz-correct {
+            border-color: #22c55e !important;
+            background-color: #dcfce7 !important;
+        }
+        .quiz-wrong {
+            border-color: #ef4444 !important;
+            background-color: #fee2e2 !important;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 z-20 shrink-0 shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 p-2 rounded-lg shadow-sm">
+                <i data-lucide="activity" class="text-white w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-xl tracking-tight text-slate-900">TEG<span class="text-blue-600">Master</span></h1>
+                <p class="text-xs text-slate-500">Thromboelastography for UK Emergency Medicine</p>
+            </div>
+        </div>
+        <div class="hidden md:flex items-center gap-4 text-sm text-slate-500">
+            <button onclick="switchTab('learn')" class="hover:text-blue-600 transition-colors font-medium">Education Centre</button>
+            <div class="h-4 w-px bg-slate-300"></div>
+            <button onclick="switchTab('test')" class="hover:text-blue-600 transition-colors font-medium">Quiz Mode</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex overflow-hidden relative">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="w-full md:w-80 bg-white border-r border-slate-200 flex flex-col z-10 overflow-hidden shrink-0 transition-all duration-300 absolute md:relative -translate-x-full md:translate-x-0 h-full shadow-lg md:shadow-none" id="sidebar">
+            
+            <!-- Tab Navigation -->
+            <div class="flex border-b border-slate-200 text-xs font-medium">
+                <button onclick="switchTab('simulator')" id="tab-btn-simulator" class="flex-1 py-3 text-center transition-colors tab-active">
+                    Simulate
+                </button>
+                <button onclick="switchTab('compare')" id="tab-btn-compare" class="flex-1 py-3 text-center transition-colors tab-inactive">
+                    Compare
+                </button>
+                <button onclick="switchTab('test')" id="tab-btn-test" class="flex-1 py-3 text-center transition-colors tab-inactive">
+                    Test Me
+                </button>
+                <button onclick="switchTab('learn')" id="tab-btn-learn" class="flex-1 py-3 text-center transition-colors tab-inactive">
+                    Learn
+                </button>
+            </div>
+
+            <!-- Content Container -->
+            <div class="flex-1 overflow-y-auto p-4 relative bg-white">
+                
+                <!-- Tab: Simulator -->
+                <div id="view-simulator" class="space-y-6">
+                    <div>
+                        <h2 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Pathology Presets</h2>
+                        <div class="grid grid-cols-1 gap-2" id="sim-buttons-container">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <h2 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Controls</h2>
+                        <div class="flex gap-2 mb-3">
+                            <button onclick="startAnimation()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition-colors flex justify-center items-center gap-2 shadow-sm text-sm">
+                                <i data-lucide="play" class="w-4 h-4"></i> Run
+                            </button>
+                            <button onclick="resetSim()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-2 rounded-lg transition-colors" title="Reset">
+                                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <div class="flex items-center justify-between text-sm mb-3">
+                            <span class="text-slate-500">Speed</span>
+                            <select id="speedSelect" class="bg-white text-slate-700 text-xs rounded p-1 border border-slate-200 focus:ring-1 focus:ring-blue-500 outline-none">
+                                <option value="1">1x (Real-time)</option>
+                                <option value="10">10x (Fast)</option>
+                                <option value="50" selected>50x (Super Fast)</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="showGhost" class="rounded text-blue-600 focus:ring-blue-500" onchange="resizeCanvas()">
+                            <label for="showGhost" class="text-xs text-slate-600 cursor-pointer">Overlay Normal Trace</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Compare (Thumbnails) -->
+                <div id="view-compare" class="hidden space-y-4">
+                     <p class="text-xs text-slate-500 mb-2">Click any graph to view it in full screen.</p>
+                     <div id="compare-list" class="space-y-6">
+                         <!-- Filled by JS -->
+                     </div>
+                </div>
+
+                <!-- Tab: Test -->
+                <div id="view-test" class="hidden space-y-4">
+                    <div class="bg-blue-50 border border-blue-100 p-4 rounded-lg">
+                        <h3 class="font-bold text-blue-900 mb-1">Clinical Quiz</h3>
+                        <p class="text-xs text-blue-700">Look at the trace on the right. What is the most appropriate blood product?</p>
+                    </div>
+                    
+                    <button onclick="startQuiz()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-medium shadow-sm hover:bg-blue-700">Next Case</button>
+
+                    <div id="quiz-options" class="space-y-2 mt-4 opacity-50 pointer-events-none transition-opacity">
+                        <button onclick="checkAnswer('ffp')" class="quiz-option w-full p-3 rounded-lg text-left text-sm font-medium text-slate-700 bg-white">
+                            Give FFP / Octaplex
+                        </button>
+                        <button onclick="checkAnswer('cryo')" class="quiz-option w-full p-3 rounded-lg text-left text-sm font-medium text-slate-700 bg-white">
+                            Give Cryoprecipitate
+                        </button>
+                        <button onclick="checkAnswer('plt')" class="quiz-option w-full p-3 rounded-lg text-left text-sm font-medium text-slate-700 bg-white">
+                            Give Platelets
+                        </button>
+                         <button onclick="checkAnswer('txa')" class="quiz-option w-full p-3 rounded-lg text-left text-sm font-medium text-slate-700 bg-white">
+                            Give Tranexamic Acid
+                        </button>
+                         <button onclick="checkAnswer('none')" class="quiz-option w-full p-3 rounded-lg text-left text-sm font-medium text-slate-700 bg-white">
+                            No Product Needed
+                        </button>
+                    </div>
+                    <div id="quiz-feedback" class="hidden p-4 rounded-lg border text-sm mt-4"></div>
+                </div>
+
+                <!-- Tab: Learn (TOC) -->
+                <div id="view-learn-sidebar" class="hidden space-y-2">
+                    <p class="text-xs text-slate-500 mb-4">Educational Modules</p>
+                    <button onclick="scrollToLearn('intro')" class="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded">Introduction</button>
+                    <button onclick="scrollToLearn('physics')" class="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded">Cup & Pin Animation</button>
+                    <button onclick="scrollToLearn('anatomy')" class="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded">Anatomy of Trace</button>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- Main Visualization Area -->
+        <section class="flex-1 flex flex-col relative bg-slate-50 overflow-hidden">
+            
+            <!-- Mobile Toggle -->
+            <button onclick="toggleSidebar()" class="md:hidden absolute top-4 left-4 z-30 bg-white p-2 rounded-lg border border-slate-200 text-slate-600 shadow-md">
+                <i data-lucide="menu" class="w-5 h-5"></i>
+            </button>
+
+            <!-- MODE 1: CANVAS SIMULATOR & TEST & COMPARE -->
+            <div id="main-canvas-view" class="flex-1 flex flex-col h-full relative">
+                
+                <!-- Comparison Grid View (Visible only when Compare Tab Active) -->
+                <div id="comparison-grid-view" class="hidden absolute inset-0 bg-slate-50 z-20 overflow-y-auto p-8">
+                     <h2 class="text-2xl font-bold text-slate-900 mb-6">Pathology Comparison</h2>
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8" id="comparison-grid-container">
+                         <!-- Large static graphs injected here -->
+                     </div>
+                </div>
+
+                <!-- Main Canvas Container -->
+                <div class="flex-1 relative teg-grid overflow-hidden flex flex-col items-center justify-center p-4">
+                    
+                    <!-- Legend -->
+                    <div class="absolute top-6 right-6 flex flex-col gap-2 z-10 pointer-events-none">
+                        <div class="glass-panel px-4 py-2 rounded-lg flex items-center gap-3">
+                            <div id="statusDot" class="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
+                            <div>
+                                <span class="block text-[10px] text-slate-500 uppercase font-bold">Scenario</span>
+                                <span class="font-mono text-sm font-bold text-slate-800" id="statusText">Ready</span>
+                            </div>
+                        </div>
+                        <div class="glass-panel px-4 py-2 rounded-lg text-right">
+                            <span class="block text-[10px] text-slate-500 uppercase font-bold">Time</span>
+                            <span class="font-mono text-xl font-bold text-slate-800"><span id="timeDisplay">0.0</span> <span class="text-xs text-slate-400 font-normal">min</span></span>
+                        </div>
+                    </div>
+
+                    <!-- Enhanced Size Canvas: Using vh for massive size on desktop -->
+                    <canvas id="tegCanvas" class="w-full max-w-6xl h-[400px] md:h-[70vh] object-contain"></canvas>
+                    
+                    <!-- Readout Tiles -->
+                    <div class="w-full max-w-6xl mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 z-10">
+                        <!-- R Time -->
+                        <div id="card-r" class="glass-panel p-3 rounded-lg border-l-4 border-blue-500 cursor-pointer hover:-translate-y-1 transition-transform relative overflow-hidden group" onclick="showInfo('r')">
+                            <div class="absolute inset-0 bg-blue-50 opacity-0 group-hover:opacity-50 transition-opacity"></div>
+                            <div class="relative z-10">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">Reaction Time</div>
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-2xl font-bold text-slate-800" id="val-r">--</span>
+                                    <span class="text-xs text-blue-600 font-bold">R</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Alpha -->
+                        <div id="card-k" class="glass-panel p-3 rounded-lg border-l-4 border-yellow-500 cursor-pointer hover:-translate-y-1 transition-transform relative overflow-hidden group" onclick="showInfo('k')">
+                            <div class="absolute inset-0 bg-yellow-50 opacity-0 group-hover:opacity-50 transition-opacity"></div>
+                            <div class="relative z-10">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">Angle / Kinetics</div>
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-2xl font-bold text-slate-800" id="val-alpha">--</span>
+                                    <span class="text-xs text-yellow-600 font-bold">α</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MA -->
+                        <div id="card-ma" class="glass-panel p-3 rounded-lg border-l-4 border-orange-500 cursor-pointer hover:-translate-y-1 transition-transform relative overflow-hidden group" onclick="showInfo('ma')">
+                            <div class="absolute inset-0 bg-orange-50 opacity-0 group-hover:opacity-50 transition-opacity"></div>
+                            <div class="relative z-10">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">Max Amplitude</div>
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-2xl font-bold text-slate-800" id="val-ma">--</span>
+                                    <span class="text-xs text-orange-600 font-bold">MA</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LY30 -->
+                        <div id="card-ly30" class="glass-panel p-3 rounded-lg border-l-4 border-red-500 cursor-pointer hover:-translate-y-1 transition-transform relative overflow-hidden group" onclick="showInfo('ly30')">
+                            <div class="absolute inset-0 bg-red-50 opacity-0 group-hover:opacity-50 transition-opacity"></div>
+                            <div class="relative z-10">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">Lysis at 30m</div>
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-2xl font-bold text-slate-800" id="val-ly30">--</span>
+                                    <span class="text-xs text-red-600 font-bold">LY30</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODE 2: EDUCATION CONTENT -->
+            <div id="main-learn-view" class="hidden flex-1 overflow-y-auto bg-white p-8 md:p-12 relative scroll-smooth">
+                <div class="max-w-5xl mx-auto space-y-16 pb-20">
+                    
+                    <!-- Intro -->
+                    <section id="learn-intro">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="bg-blue-100 p-3 rounded-xl">
+                                <i data-lucide="book-open" class="text-blue-600 w-8 h-8"></i>
+                            </div>
+                            <h1 class="text-3xl font-bold text-slate-900">Viscoelastic Haemostatic Assays</h1>
+                        </div>
+                        <p class="text-lg text-slate-600 leading-relaxed max-w-3xl">
+                            Standard clotting screens (INR/APTT) only measure the time to the <em>start</em> of fibrin formation. TEG measures the entire lifespan of a clot: from formation, through strength (platelet-fibrin interaction), to degradation (fibrinolysis). This guides massive transfusion accurately.
+                        </p>
+                    </section>
+
+                    <!-- Advanced Physics Animation -->
+                    <section id="learn-physics" class="bg-slate-50 p-8 rounded-2xl border border-slate-200">
+                        <h2 class="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                            <i data-lucide="flask-conical" class="text-slate-500"></i> The Physics: Top-Down View
+                        </h2>
+                        
+                        <div class="grid md:grid-cols-[1fr_300px] gap-8">
+                            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-[450px] relative">
+                                <canvas id="physicsCanvas" class="w-full h-full"></canvas>
+                                <div class="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur p-4 rounded-lg border border-slate-100 shadow-sm">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <div class="text-xs font-bold text-blue-600 uppercase mb-1" id="phys-phase">Phase 1: Fluid</div>
+                                            <div class="text-sm text-slate-700" id="phys-desc">Initial state.</div>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="text-[10px] text-slate-400 uppercase font-bold">Torsion (Trace)</div>
+                                            <div id="phys-torque-bar" class="w-24 h-2 bg-slate-200 rounded-full mt-1 overflow-hidden">
+                                                <div class="h-full bg-green-500 w-0 transition-all duration-100"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="space-y-6 text-sm text-slate-600">
+                                <div>
+                                    <h4 class="font-bold text-slate-900 mb-1 flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs">1</span>
+                                        Fluid Phase (R-Time)
+                                    </h4>
+                                    <p>The <strong>Cup (Outer)</strong> oscillates 4°45' every 10s. The blood is liquid. Red cells flow around the stationary <strong>Pin (Inner)</strong>. No torque is transferred. Trace is flat.</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-900 mb-1 flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs">2</span>
+                                        Clot Initiation (Alpha)
+                                    </h4>
+                                    <p>Enzymatic cascade triggers. <strong>Fibrin strands (White)</strong> grow from the cup wall to the pin, creating a physical tether.</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-900 mb-1 flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs">3</span>
+                                        Max Strength (MA)
+                                    </h4>
+                                    <p><strong>Platelets (Yellow)</strong> bind to fibrin, contracting the clot. The clot is now stiff. The Pin is dragged forcefully by the Cup. Max trace amplitude.</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-900 mb-1 flex items-center gap-2">
+                                        <span class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs">4</span>
+                                        Lysis (LY30)
+                                    </h4>
+                                    <p>Plasmin cuts the fibrin strands. The tether breaks. The Pin loses momentum and returns to stationary, while the Cup continues to oscillate.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Interactive Anatomy Canvas -->
+                    <section id="learn-anatomy">
+                        <h2 class="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            <i data-lucide="scan-line" class="text-slate-500"></i> Anatomy of the Trace
+                        </h2>
+                        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+                            <canvas id="anatomyCanvas" class="w-full h-[400px] object-contain"></canvas>
+                        </div>
+                    </section>
+                </div>
+            </div>
+            
+            <!-- Info Drawer (Pop-up) -->
+            <div id="infoDrawer" class="bg-white border-t border-slate-200 p-6 transform translate-y-full transition-transform duration-300 absolute bottom-0 left-0 right-0 z-40 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+                <button onclick="closeInfo()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 bg-slate-100 p-1 rounded-full">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+                <div id="infoContent" class="max-w-5xl mx-auto">
+                    <!-- Dynamic Content -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // --- Data Models ---
+        const scenarios = {
+            normal: { 
+                r: 6, k: 2, alpha: 65, ma: 60, ly30: 2, 
+                label: "Normal Trace", 
+                badge: "Healthy", badgeColor: "bg-green-100 text-green-700",
+                correctProduct: "none",
+                clinicalDesc: "All parameters are within normal limits. No haemostatic resuscitation required."
+            },
+            coagulopathy: { 
+                r: 18, k: 7, alpha: 35, ma: 55, ly30: 1, 
+                label: "Factor Deficiency", 
+                desc: "Prolonged R-time",
+                badge: "Warfarin", badgeColor: "bg-yellow-100 text-yellow-700",
+                correctProduct: "ffp",
+                clinicalDesc: "The R-time is significantly prolonged (>8min), indicating a deficiency in clotting factors. Common in Warfarin use or dilution."
+            },
+            thrombocytopenia: { 
+                r: 5, k: 5, alpha: 45, ma: 35, ly30: 0, 
+                label: "Low Platelets", 
+                desc: "Narrow 'cigar' shape",
+                badge: "Low PLT", badgeColor: "bg-orange-100 text-orange-700",
+                correctProduct: "plt",
+                clinicalDesc: "The MA is low (<55mm). MA is 80% dependent on platelets. This indicates thrombocytopenia or platelet dysfunction (e.g. aspirin)."
+            },
+            fibrinolysis: { 
+                r: 5, k: 1.5, alpha: 70, ma: 65, ly30: 45, 
+                label: "Hyperfibrinolysis", 
+                desc: "Teardrop Trace",
+                badge: "Trauma", badgeColor: "bg-red-100 text-red-700",
+                correctProduct: "txa",
+                clinicalDesc: "The amplitude collapses rapidly after MA. LY30 is >3%. This is primary hyperfibrinolysis, common in severe trauma."
+            },
+            lowfib: { 
+                r: 7, k: 9, alpha: 25, ma: 45, ly30: 1, 
+                label: "Low Fibrinogen", 
+                desc: "Low Alpha Angle",
+                badge: "Hypofib", badgeColor: "bg-amber-100 text-amber-700",
+                correctProduct: "cryo",
+                clinicalDesc: "The Alpha angle is shallow (<47°), indicating slow clot polymerisation due to low Fibrinogen levels."
+            },
+            heparin: { 
+                r: 35, k: 5, alpha: 30, ma: 55, ly30: 1, 
+                label: "Heparin Effect", 
+                desc: "Grossly prolonged R",
+                badge: "Heparin", badgeColor: "bg-blue-100 text-blue-700",
+                correctProduct: "ffp", // Technically Protamine, but usually FFP in simple quiz context if not listed
+                clinicalDesc: "R-time is extremely prolonged. In a heparinase TEG, this would correct to normal."
+            }
+        };
+
+        const educationalContent = {
+            r: {
+                title: "R-Time (Reaction Time)",
+                desc: "Time from start of test to initial fibrin formation (2mm). Represents the enzymatic pathway.",
+                normal: "4–8 minutes",
+                low: "Hypercoagulable state",
+                high: "Factor deficiency (Haemophilia, Warfarin, Dilution) or Heparin.",
+                treatment: "<strong>Administer FFP (Fresh Frozen Plasma)</strong> 15ml/kg.<br>Consider Prothrombin Complex Concentrate (PCC) if Warfarinised."
+            },
+            k: {
+                title: "Alpha Angle",
+                desc: "The slope of the trace tangent. Represents the speed of fibrin accumulation and cross-linking.",
+                normal: "47–74°",
+                low: "Low Fibrinogen levels.",
+                treatment: "<strong>Administer Cryoprecipitate</strong> (2 pools) or Fibrinogen Concentrate."
+            },
+            ma: {
+                title: "Maximum Amplitude (MA)",
+                desc: "The maximum width of the clot. Represents absolute clot strength. 80% Platelets, 20% Fibrin.",
+                normal: "55–73 mm",
+                low: "Thrombocytopenia (Low count) or Thrombasthenia (Dysfunction e.g. Aspirin, Uraemia).",
+                treatment: "<strong>Administer Platelets</strong> (1 pool)."
+            },
+            ly30: {
+                title: "LY30 (Lysis)",
+                desc: "Percentage decrease in amplitude 30 mins after MA. Represents clot stability.",
+                normal: "< 3%",
+                high: "Hyperfibrinolysis (Clot breaking down too fast).",
+                treatment: "<strong>Administer Tranexamic Acid (TXA)</strong> 1g IV immediately."
+            }
+        };
+
+        // --- State ---
+        let mainCtx, mainCanvas;
+        let anatomyCtx, anatomyCanvas;
+        let physicsCtx, physicsCanvas;
+        let animationId;
+        let currentTime = 0;
+        let isRunning = false;
+        let currentMode = 'simulator'; 
+        let currentParams = { ...scenarios.normal };
+        let activeHighlight = null; 
+        let anatomyPhase = 0; 
+        let anatomyTimer = 0;
+        let activeQuizAnswer = null;
+
+        // Constants
+        const TIME_SCALE = 15; 
+        const AMP_SCALE = 2;   
+
+        // --- Init ---
+        window.addEventListener('load', function() {
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            mainCanvas = document.getElementById('tegCanvas');
+            mainCtx = mainCanvas.getContext('2d');
+            
+            anatomyCanvas = document.getElementById('anatomyCanvas');
+            anatomyCtx = anatomyCanvas.getContext('2d');
+            
+            physicsCanvas = document.getElementById('physicsCanvas');
+            physicsCtx = physicsCanvas.getContext('2d');
+            
+            setupUI();
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Initial Draw
+            drawFrame(mainCtx, mainCanvas.width, mainCanvas.height, currentParams, 0, true);
+            updateReadout();
+            
+            // Start Loops
+            requestAnimationFrame(animateAnatomyLoop);
+            requestAnimationFrame(animatePhysicsLoop);
+        });
+
+        // --- Advanced Physics Simulation (Top Down) ---
+        let physTime = 0;
+        const numParticles = 80;
+        // RBCs
+        const particles = Array.from({length: numParticles}, () => ({
+            r_dist: Math.random() * 65 + 15, // Radius from center (15 to 80)
+            theta: Math.random() * Math.PI * 2,
+            size: Math.random() * 2 + 1.5,
+            speedOffset: Math.random() * 0.2 + 0.9
+        }));
+        
+        // Fibrin Strands
+        const strands = Array.from({length: 12}, (_, i) => ({
+            angle: (i / 12) * Math.PI * 2,
+            active: false
+        }));
+
+        // Platelets
+        const platelets = Array.from({length: 20}, () => ({
+            r_dist: Math.random() * 60 + 20,
+            theta: Math.random() * Math.PI * 2,
+            size: 1.5
+        }));
+
+        function animatePhysicsLoop() {
+            if (currentMode !== 'learn') {
+                requestAnimationFrame(animatePhysicsLoop);
+                return;
+            }
+
+            // Init Canvas Size
+            if (physicsCanvas.width !== physicsCanvas.parentElement.clientWidth) {
+                physicsCanvas.width = physicsCanvas.parentElement.clientWidth;
+                physicsCanvas.height = 450;
+            }
+            
+            const w = physicsCanvas.width;
+            const h = physicsCanvas.height;
+            const cx = w/2;
+            const cy = h/2;
+
+            physicsCtx.clearRect(0, 0, w, h);
+            physTime += 0.03; // Time step
+
+            // --- Phase Controller ---
+            const cycle = physTime % 24; // 24s total loop
+            let phaseName = "";
+            let phaseDesc = "";
+            let coupling = 0; // How much pin moves with cup (0 to 1)
+            let fibrinOpacity = 0;
+            let plateletOpacity = 0;
+            let lysisActive = false;
+
+            // Cup Motion: +/- 15 degrees sine wave
+            const cupAngle = Math.sin(physTime * 2) * 15 * (Math.PI/180); 
+
+            if (cycle < 6) {
+                // Phase 1: Fluid
+                phaseName = "1. Fluid Phase (R-Time)";
+                phaseDesc = "Cup rotates. Blood swirls. Pin stationary.";
+                coupling = 0;
+                fibrinOpacity = 0;
+            } else if (cycle < 12) {
+                // Phase 2: Fibrin Formation
+                phaseName = "2. Fibrin Formation (Alpha)";
+                phaseDesc = "Strands grow. Pin starts to drag.";
+                const progress = (cycle - 6) / 6; 
+                coupling = progress * 0.6; // Ramp up to 0.6
+                fibrinOpacity = progress;
+            } else if (cycle < 18) {
+                // Phase 3: MA
+                phaseName = "3. Max Strength (MA)";
+                phaseDesc = "Clot stiffens (Platelets). Pin moves in sync.";
+                coupling = 0.9;
+                fibrinOpacity = 1;
+                plateletOpacity = Math.min((cycle - 12), 1); // Fade in
+            } else {
+                // Phase 4: Lysis
+                phaseName = "4. Lysis (LY30)";
+                phaseDesc = "Strands snap. Pin stops moving.";
+                const progress = (cycle - 18) / 6;
+                lysisActive = true;
+                coupling = 0.9 * (1 - progress); // Decay
+                fibrinOpacity = 1 - progress;
+                plateletOpacity = 1 - progress;
+            }
+
+            // Update UI
+            document.getElementById('phys-phase').innerText = phaseName;
+            document.getElementById('phys-desc').innerText = phaseDesc;
+            document.getElementById('phys-torque-bar').children[0].style.width = (coupling * 100) + "%";
+
+            // Pin Motion
+            const pinAngle = cupAngle * coupling;
+
+            physicsCtx.save();
+            physicsCtx.translate(cx, cy);
+
+            // 1. Draw Cup (Outer Ring)
+            physicsCtx.save();
+            physicsCtx.rotate(cupAngle);
+            physicsCtx.beginPath();
+            physicsCtx.arc(0, 0, 90, 0, Math.PI*2); // Outer rim
+            physicsCtx.strokeStyle = "#94a3b8";
+            physicsCtx.lineWidth = 6;
+            physicsCtx.stroke();
+            // Cup Marker
+            physicsCtx.fillStyle = "#64748b";
+            physicsCtx.fillRect(-5, -96, 10, 6);
+            physicsCtx.restore();
+
+            // 2. Draw Blood (RBCs)
+            // Physics: Particles near cup move with cup angle. Particles near pin move with pin angle.
+            // Simple Lerp based on radius
+            particles.forEach(p => {
+                const rNorm = (p.r_dist - 15) / 65; // 0 (near pin) to 1 (near cup)
+                // Interpolate angle
+                const particleAngleBase = pinAngle + (cupAngle - pinAngle) * rNorm;
+                // Add swirling noise
+                const noise = Math.sin(physTime + p.r_dist) * 0.1 * (1-coupling); 
+                const finalAngle = p.theta + particleAngleBase + noise;
+
+                const px = Math.cos(finalAngle) * p.r_dist;
+                const py = Math.sin(finalAngle) * p.r_dist;
+
+                physicsCtx.fillStyle = "#ef4444";
+                physicsCtx.beginPath();
+                physicsCtx.arc(px, py, p.size, 0, Math.PI*2);
+                physicsCtx.fill();
+            });
+
+            // 3. Draw Fibrin Strands
+            if (fibrinOpacity > 0) {
+                physicsCtx.globalAlpha = fibrinOpacity;
+                physicsCtx.strokeStyle = "#f8fafc"; // White/Off-white
+                physicsCtx.lineWidth = 2;
+                
+                strands.forEach((s, i) => {
+                    // Start at Pin, End at Cup
+                    // Pin point
+                    const pinX = Math.cos(s.angle + pinAngle) * 15;
+                    const pinY = Math.sin(s.angle + pinAngle) * 15;
+                    // Cup point
+                    const cupX = Math.cos(s.angle + cupAngle) * 90;
+                    const cupY = Math.sin(s.angle + cupAngle) * 90;
+
+                    physicsCtx.beginPath();
+                    physicsCtx.moveTo(pinX, pinY);
+                    
+                    // If lysis, break lines
+                    if (lysisActive && i % 2 === 0 && Math.random() > 0.5) {
+                        // Broken strand
+                         physicsCtx.lineTo(pinX + (cupX-pinX)*0.3, pinY + (cupY-pinY)*0.3);
+                    } else {
+                        // Solid strand
+                        // Bezier for tension effect? Straight is fine for taught clot
+                        physicsCtx.lineTo(cupX, cupY);
+                    }
+                    physicsCtx.stroke();
+                });
+                physicsCtx.globalAlpha = 1;
+            }
+
+            // 4. Draw Platelets (Yellow dots on strands)
+            if (plateletOpacity > 0) {
+                physicsCtx.globalAlpha = plateletOpacity;
+                physicsCtx.fillStyle = "#facc15"; // Yellow
+                platelets.forEach(plt => {
+                    // Attach loosely to cup motion frame
+                    const pltAngle = plt.theta + cupAngle; 
+                    const px = Math.cos(pltAngle) * plt.r_dist;
+                    const py = Math.sin(pltAngle) * plt.r_dist;
+                    physicsCtx.beginPath();
+                    physicsCtx.arc(px, py, 2, 0, Math.PI*2);
+                    physicsCtx.fill();
+                });
+                physicsCtx.globalAlpha = 1;
+            }
+
+            // 5. Draw Pin (Center)
+            physicsCtx.rotate(pinAngle);
+            physicsCtx.fillStyle = "#334155";
+            physicsCtx.beginPath();
+            physicsCtx.arc(0, 0, 15, 0, Math.PI*2);
+            physicsCtx.fill();
+            // Pin Indicator Line (to show rotation)
+            physicsCtx.strokeStyle = "#fff";
+            physicsCtx.lineWidth = 2;
+            physicsCtx.beginPath();
+            physicsCtx.moveTo(0, -15); physicsCtx.lineTo(0, 15);
+            physicsCtx.stroke();
+
+            physicsCtx.restore(); // End Translate
+
+            requestAnimationFrame(animatePhysicsLoop);
+        }
+
+        // --- Anatomy Animation Loop (Corrected Coords) ---
+        function animateAnatomyLoop() {
+            if (currentMode !== 'learn') {
+                requestAnimationFrame(animateAnatomyLoop);
+                return;
+            }
+
+            if (anatomyCanvas.width !== anatomyCanvas.parentElement.clientWidth) {
+                anatomyCanvas.width = anatomyCanvas.parentElement.clientWidth;
+                anatomyCanvas.height = 400;
+            }
+
+            const w = anatomyCanvas.width;
+            const h = anatomyCanvas.height;
+            const p = scenarios.normal; 
+            const cy = h/2;
+            const startX = 50;
+
+            anatomyTimer++;
+            if (anatomyTimer > 200) {
+                anatomyTimer = 0;
+                anatomyPhase = (anatomyPhase + 1) % 4;
+            }
+
+            anatomyCtx.clearRect(0, 0, w, h);
+            drawFrame(anatomyCtx, w, h, p, 60, false);
+            
+            // Overlay Logic
+            anatomyCtx.font = "bold 14px Inter";
+            const phase = ['r', 'k', 'ma', 'ly30'][anatomyPhase];
+            
+            // Draw Bracket Helper
+            const drawBracket = (x1, x2, y, label) => {
+                anatomyCtx.strokeStyle = "#1e293b"; anatomyCtx.lineWidth = 2;
+                anatomyCtx.beginPath();
+                anatomyCtx.moveTo(x1, y+5); anatomyCtx.lineTo(x1, y); anatomyCtx.lineTo(x2, y); anatomyCtx.lineTo(x2, y+5);
+                anatomyCtx.stroke();
+                anatomyCtx.fillStyle = "#1e293b"; anatomyCtx.textAlign = "center";
+                anatomyCtx.fillText(label, (x1+x2)/2, y-5);
+                anatomyCtx.textAlign = "start";
+            };
+
+            if (phase === 'r') {
+                const rEnd = startX + (p.r * TIME_SCALE);
+                // Highlight R Zone
+                anatomyCtx.fillStyle = "rgba(59, 130, 246, 0.15)";
+                anatomyCtx.fillRect(startX, cy - 5, (p.r * TIME_SCALE), 10);
+                drawBracket(startX, rEnd, cy - 30, "Reaction Time (R)");
+                
+                anatomyCtx.fillStyle = "#3b82f6";
+                anatomyCtx.fillText("Starts at 0, Ends at 2mm amp", startX, cy + 50);
+            }
+
+            if (phase === 'k') {
+                const rEnd = startX + (p.r * TIME_SCALE);
+                // Draw Tangent
+                anatomyCtx.save();
+                anatomyCtx.translate(rEnd, cy - 1); 
+                anatomyCtx.strokeStyle = "#ca8a04"; anatomyCtx.lineWidth = 3;
+                anatomyCtx.beginPath(); anatomyCtx.moveTo(0,0); anatomyCtx.lineTo(80, -80); anatomyCtx.stroke();
+                
+                // Draw Angle Arc
+                anatomyCtx.beginPath(); anatomyCtx.arc(0, 0, 40, -Math.PI/4, 0); anatomyCtx.stroke();
+                
+                anatomyCtx.fillStyle = "#854d0e";
+                anatomyCtx.fillText("Alpha Angle", 50, -20);
+                anatomyCtx.restore();
+            }
+
+            if (phase === 'ma') {
+                const maTime = p.r + (p.k * 5);
+                const maX = startX + (maTime * TIME_SCALE);
+                const maY = (p.ma * AMP_SCALE);
+                
+                // Vertical Bracket
+                anatomyCtx.strokeStyle = "#ea580c"; anatomyCtx.lineWidth = 2;
+                anatomyCtx.beginPath();
+                anatomyCtx.moveTo(maX + 10, cy - maY/2); 
+                anatomyCtx.lineTo(maX + 20, cy - maY/2); 
+                anatomyCtx.lineTo(maX + 20, cy + maY/2); 
+                anatomyCtx.lineTo(maX + 10, cy + maY/2);
+                anatomyCtx.stroke();
+
+                anatomyCtx.fillStyle = "#9a3412";
+                anatomyCtx.fillText("Max Amplitude (MA)", maX + 30, cy);
+            }
+
+            if (phase === 'ly30') {
+                const maTime = p.r + (p.k * 5);
+                const maX = startX + (maTime * TIME_SCALE);
+                const lyX = maX + (30 * TIME_SCALE); 
+                
+                // Highlight area under curve loss
+                anatomyCtx.fillStyle = "rgba(220, 38, 38, 0.1)";
+                anatomyCtx.fillRect(maX, cy - 60, (lyX - maX), 120);
+                
+                drawBracket(maX, lyX, cy - 80, "30 mins post-MA");
+                anatomyCtx.fillStyle = "#991b1b";
+                anatomyCtx.fillText("% Reduction in Amplitude", maX + 10, cy - 60);
+            }
+
+            requestAnimationFrame(animateAnatomyLoop);
+        }
+
+        // --- Core Graphics Engine ---
+        function getAmplitude(t, p) {
+            if (t < p.r) return 1;
+            const timeSinceStart = t - p.r;
+            const alphaRad = p.alpha * (Math.PI / 180);
+            const growthRate = Math.tan(alphaRad) * 0.15;
+            let amp = p.ma * (1 - Math.exp(-growthRate * timeSinceStart));
+            const timeToMA = p.r + (p.k * 4); 
+            if (t > timeToMA) {
+                const timeSinceMA = t - timeToMA;
+                let lyDecimal = Math.min(p.ly30 / 100, 0.99);
+                if(lyDecimal > 0) {
+                    const lambda = -Math.log(1 - lyDecimal) / 30;
+                    const decay = Math.exp(-lambda * timeSinceMA);
+                    amp = amp * decay;
+                }
+            }
+            return Math.max(1, amp);
+        }
+
+        function drawFrame(ctx, w, h, p, simTime, showMarkers = true) {
+            if(showMarkers) ctx.clearRect(0, 0, w, h); 
+            
+            const centerY = h / 2;
+            const startX = showMarkers ? 50 : 10; 
+            const scaleX = showMarkers ? TIME_SCALE : (w - 20) / 60; 
+            const scaleY = showMarkers ? AMP_SCALE : (h - 10) / 80;
+
+            // Axis
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, centerY);
+            ctx.lineTo(w, centerY);
+            ctx.stroke();
+            
+            const drawTracePath = (params, color, width) => {
+                ctx.beginPath();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = width;
+                ctx.lineJoin = 'round';
+                ctx.moveTo(startX, centerY - 0.5);
+                const step = 0.5; 
+                for (let t = 0; t <= simTime; t += step) {
+                    const amp = getAmplitude(t, params);
+                    const x = startX + (t * scaleX);
+                    const y = centerY - (amp * scaleY / 2);
+                    ctx.lineTo(x, y);
+                    if (x > w) break;
+                }
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(startX, centerY + 0.5);
+                for (let t = 0; t <= simTime; t += step) {
+                    const amp = getAmplitude(t, params);
+                    const x = startX + (t * scaleX);
+                    const y = centerY + (amp * scaleY / 2);
+                    ctx.lineTo(x, y);
+                    if (x > w) break;
+                }
+                ctx.stroke();
+            };
+
+            if (showMarkers && document.getElementById('showGhost') && document.getElementById('showGhost').checked) {
+                drawTracePath(scenarios.normal, '#e2e8f0', 2);
+            }
+
+            drawTracePath(p, '#0284c7', showMarkers ? 2.5 : 2);
+
+            if (showMarkers) {
+                if (activeHighlight) drawOverlays(ctx, w, h, p, activeHighlight);
+                
+                const currentAmp = getAmplitude(simTime, p);
+                const headX = startX + (simTime * scaleX);
+                if (headX < w) {
+                    ctx.fillStyle = '#0c4a6e';
+                    ctx.beginPath(); ctx.arc(headX, centerY - (currentAmp * scaleY / 2), 3, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(headX, centerY + (currentAmp * scaleY / 2), 3, 0, Math.PI*2); ctx.fill();
+                }
+                
+                if (simTime > p.r) {
+                    const rX = startX + (p.r * scaleX);
+                    ctx.strokeStyle = '#3b82f6';
+                    ctx.beginPath(); ctx.moveTo(rX, centerY-10); ctx.lineTo(rX, centerY+10); ctx.stroke();
+                    ctx.fillStyle = '#3b82f6'; ctx.font = '10px Inter'; ctx.fillText("R", rX-3, centerY-15);
+                }
+            }
+        }
+
+        // --- Unified Overlay Drawer ---
+        function drawOverlays(ctx, w, h, p, type) {
+            const centerY = h/2;
+            const startX = 50;
+            ctx.font = "bold 14px Inter";
+
+            if (type === 'r') {
+                const rX = startX + (p.r * TIME_SCALE);
+                ctx.fillStyle = "rgba(59, 130, 246, 0.1)"; 
+                ctx.fillRect(startX, centerY - 20, (p.r * TIME_SCALE), 40);
+                ctx.beginPath(); ctx.strokeStyle = "#3b82f6"; ctx.lineWidth = 2;
+                ctx.moveTo(startX, centerY-25); ctx.lineTo(rX, centerY-25); ctx.stroke();
+                ctx.fillStyle = "#1e40af"; ctx.fillText("R-Time", startX + 10, centerY - 35);
+            }
+            if (type === 'k' || type === 'alpha') {
+                const rX = startX + (p.r * TIME_SCALE);
+                ctx.save(); ctx.translate(rX, centerY - 1); 
+                ctx.beginPath(); ctx.strokeStyle = "#ca8a04"; ctx.lineWidth = 2;
+                ctx.moveTo(0, 0); ctx.lineTo(60, -60); ctx.stroke();
+                ctx.fillStyle = "#854d0e"; ctx.fillText("Alpha", 65, -40); ctx.restore();
+            }
+            if (type === 'ma') {
+                const maTime = p.r + (p.k * 5);
+                const maX = startX + (maTime * TIME_SCALE);
+                const maY = (p.ma * AMP_SCALE);
+                ctx.fillStyle = "rgba(249, 115, 22, 0.1)"; ctx.fillRect(maX - 20, centerY - maY/2, 40, maY);
+                ctx.fillStyle = "#9a3412"; ctx.fillText("MA", maX + 25, centerY);
+            }
+            if (type === 'ly30') {
+                const maTime = p.r + (p.k * 5);
+                const maX = startX + (maTime * TIME_SCALE);
+                const lyX = maX + (30 * TIME_SCALE); 
+                ctx.fillStyle = "rgba(220, 38, 38, 0.1)"; ctx.fillRect(maX, centerY - 50, (lyX - maX), 100);
+                ctx.fillStyle = "#991b1b"; ctx.fillText("LY30", maX + 50, centerY - 60);
+            }
+        }
+
+        // --- UI & Interaction ---
+        function setupUI() {
+            const simContainer = document.getElementById('sim-buttons-container');
+            for (const [key, data] of Object.entries(scenarios)) {
+                const btn = document.createElement('button');
+                btn.className = `w-full text-left px-3 py-2 rounded text-sm text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors flex justify-between items-center`;
+                btn.onclick = () => loadSimulator(key);
+                btn.innerHTML = `<span>${data.label}</span> <span class="text-[10px] text-slate-400">${data.badge}</span>`;
+                simContainer.appendChild(btn);
+            }
+        }
+
+        // --- Comparison System ---
+        function loadComparisonGrid() {
+            const container = document.getElementById('comparison-grid-container');
+            container.innerHTML = ''; // Clear
+
+            for (const [key, data] of Object.entries(scenarios)) {
+                const wrapper = document.createElement('div');
+                wrapper.className = "bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:border-blue-400 transition-colors cursor-pointer";
+                wrapper.onclick = () => {
+                    switchTab('simulator');
+                    loadSimulator(key);
+                };
+
+                const title = document.createElement('h3');
+                title.className = "font-bold text-slate-800 mb-2";
+                title.innerText = data.label;
+                wrapper.appendChild(title);
+
+                const cvs = document.createElement('canvas');
+                cvs.width = 400; cvs.height = 200;
+                cvs.className = "w-full h-[200px] object-contain mb-2";
+                wrapper.appendChild(cvs);
+
+                const desc = document.createElement('p');
+                desc.className = "text-xs text-slate-500";
+                desc.innerText = data.clinicalDesc || data.desc;
+                wrapper.appendChild(desc);
+
+                container.appendChild(wrapper);
+
+                const mCtx = cvs.getContext('2d');
+                drawFrame(mCtx, 400, 200, data, 60, false);
+            }
+        }
+
+        // --- Quiz System ---
+        function startQuiz() {
+            // Pick random scenario (excluding normal occasionally?)
+            const keys = Object.keys(scenarios);
+            const randomKey = keys[Math.floor(Math.random() * keys.length)];
+            currentParams = { ...scenarios[randomKey] };
+            activeQuizAnswer = currentParams.correctProduct;
+
+            // Reset UI
+            document.getElementById('quiz-feedback').classList.add('hidden');
+            const opts = document.getElementById('quiz-options');
+            opts.classList.remove('opacity-50', 'pointer-events-none');
+            Array.from(opts.children).forEach(btn => btn.className = "quiz-option w-full p-3 rounded-lg text-left text-sm font-medium text-slate-700 bg-white");
+
+            // Draw Trace (Hidden label)
+            resetSim();
+            document.getElementById('statusText').innerText = "Unknown Case";
+            document.getElementById('statusDot').className = "w-3 h-3 rounded-full bg-slate-400 animate-pulse";
+            currentTime = 60; // Show full trace immediately
+            resizeCanvas();
+        }
+
+        function checkAnswer(product) {
+            const opts = document.getElementById('quiz-options');
+            opts.classList.add('pointer-events-none'); // Lock
+            
+            const feedback = document.getElementById('quiz-feedback');
+            feedback.classList.remove('hidden');
+
+            if (product === activeQuizAnswer) {
+                feedback.innerHTML = `<strong class="text-green-700">Correct!</strong><br>${currentParams.clinicalDesc}`;
+                feedback.className = "p-4 rounded-lg border text-sm mt-4 bg-green-50 border-green-200 text-green-800";
+                event.target.classList.add('quiz-correct');
+            } else {
+                feedback.innerHTML = `<strong class="text-red-700">Incorrect.</strong><br>The correct answer was based on the trace characteristics. ${currentParams.clinicalDesc}`;
+                feedback.className = "p-4 rounded-lg border text-sm mt-4 bg-red-50 border-red-200 text-red-800";
+                event.target.classList.add('quiz-wrong');
+            }
+        }
+
+        // --- Standard Logic ---
+        function loadSimulator(key) {
+            currentParams = { ...scenarios[key] };
+            resetSim();
+            updateReadout();
+            startAnimation(); 
+        }
+
+        function switchTab(tab) {
+            currentMode = tab;
+            activeHighlight = null;
+            closeInfo();
+            
+            // Toggle sidebar visibility
+            ['simulator', 'compare', 'test', 'learn'].forEach(t => {
+                const btn = document.getElementById(`tab-btn-${t}`);
+                const view = document.getElementById(t === 'learn' ? 'view-learn-sidebar' : `view-${t}`);
+                if(!btn || !view) return; // Compare/Test share sidebar space usually or need own? 
+                
+                // Compare doesn't have sidebar content really, but we keep sidebar open for nav
+                if (t === tab) {
+                    btn.classList.replace('tab-inactive', 'tab-active');
+                    if(t !== 'compare') view.classList.remove('hidden'); // Compare uses main view only
+                } else {
+                    btn.classList.replace('tab-active', 'tab-inactive');
+                    if(t !== 'compare') view.classList.add('hidden');
+                }
+            });
+
+            const mainCanvas = document.getElementById('main-canvas-view');
+            const mainLearn = document.getElementById('main-learn-view');
+            const compareGrid = document.getElementById('comparison-grid-view');
+            const canvasContainer = document.querySelector('.teg-grid'); // The canvas wrapper
+
+            if (tab === 'learn') {
+                mainCanvas.classList.add('hidden');
+                mainLearn.classList.remove('hidden');
+            } else if (tab === 'compare') {
+                mainCanvas.classList.remove('hidden');
+                mainLearn.classList.add('hidden');
+                compareGrid.classList.remove('hidden'); // Show overlay
+                loadComparisonGrid();
+            } else if (tab === 'test') {
+                mainCanvas.classList.remove('hidden');
+                mainLearn.classList.add('hidden');
+                compareGrid.classList.add('hidden');
+                document.getElementById('view-test').classList.remove('hidden');
+                document.getElementById('view-simulator').classList.add('hidden');
+                startQuiz();
+            } else { // Simulator
+                mainCanvas.classList.remove('hidden');
+                mainLearn.classList.add('hidden');
+                compareGrid.classList.add('hidden');
+                document.getElementById('view-simulator').classList.remove('hidden');
+                document.getElementById('view-test').classList.add('hidden');
+                resizeCanvas(); 
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+        }
+
+        function startAnimation() {
+            if (isRunning) return;
+            isRunning = true;
+            const speedMultiplier = parseFloat(document.getElementById('speedSelect').value);
+            let lastFrameTime = performance.now();
+
+            function loop(now) {
+                if (!isRunning) return;
+                const dt = now - lastFrameTime;
+                lastFrameTime = now;
+                const delta = (dt / 1000 / 60) * speedMultiplier * 15;
+                currentTime += delta;
+                
+                document.getElementById('timeDisplay').textContent = currentTime.toFixed(1);
+                drawFrame(mainCtx, mainCanvas.width, mainCanvas.height, currentParams, currentTime, true);
+
+                if ((50 + currentTime * TIME_SCALE) > mainCanvas.width + 50) isRunning = false;
+                else animationId = requestAnimationFrame(loop);
+            }
+            animationId = requestAnimationFrame(loop);
+        }
+
+        function resetSim() {
+            isRunning = false;
+            cancelAnimationFrame(animationId);
+            currentTime = 0;
+            activeHighlight = null;
+            document.getElementById('timeDisplay').textContent = "0.0";
+            drawFrame(mainCtx, mainCanvas.width, mainCanvas.height, currentParams, 0, true);
+        }
+
+        function resizeCanvas() {
+            const parent = mainCanvas.parentElement;
+            mainCanvas.width = parent.clientWidth;
+            mainCanvas.height = parent.clientHeight;
+            drawFrame(mainCtx, mainCanvas.width, mainCanvas.height, currentParams, currentTime, true);
+        }
+
+        function updateReadout() {
+            document.getElementById('val-r').textContent = currentParams.r;
+            document.getElementById('val-alpha').textContent = currentParams.alpha;
+            document.getElementById('val-ma').textContent = currentParams.ma;
+            document.getElementById('val-ly30').textContent = currentParams.ly30;
+            document.getElementById('statusText').textContent = currentParams.label;
+            
+            const dot = document.getElementById('statusDot');
+            dot.className = `w-3 h-3 rounded-full animate-pulse ${currentParams.badgeColor ? currentParams.badgeColor.split(' ')[0] : 'bg-green-500'}`;
+        }
+
+        function showInfo(param) {
+            activeHighlight = param;
+            resizeCanvas();
+            const drawer = document.getElementById('infoDrawer');
+            const content = document.getElementById('infoContent');
+            const data = educationalContent[param];
+            
+            content.innerHTML = `
+                <div class="grid md:grid-cols-[1fr_240px] gap-8">
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-900 mb-2 flex items-center gap-2">${data.title}</h3>
+                        <p class="text-slate-600 mb-6">${data.desc}</p>
+                        <div class="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                            <h4 class="text-xs font-bold text-blue-700 uppercase mb-2">Management</h4>
+                            <p class="text-slate-800">${data.treatment}</p>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-sm">
+                        <div class="p-3 bg-slate-50 border rounded"><span class="text-[10px] text-slate-400 uppercase block">Normal</span> <span class="font-mono font-bold text-slate-700">${data.normal}</span></div>
+                        ${data.low ? `<div class="p-3 bg-slate-50 border rounded"><span class="text-[10px] text-slate-400 uppercase block">Low</span> <span class="text-slate-600">${data.low}</span></div>` : ''}
+                        ${data.high ? `<div class="p-3 bg-slate-50 border rounded"><span class="text-[10px] text-slate-400 uppercase block">High</span> <span class="text-slate-600">${data.high}</span></div>` : ''}
+                    </div>
+                </div>`;
+            drawer.classList.remove('translate-y-full');
+        }
+
+        function closeInfo() {
+            activeHighlight = null; 
+            resizeCanvas(); 
+            document.getElementById('infoDrawer').classList.add('translate-y-full');
+        }
+
+        function scrollToLearn(id) {
+            document.getElementById(`learn-${id}`).scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
