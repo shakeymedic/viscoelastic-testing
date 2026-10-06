@@ -493,16 +493,21 @@
         const AMP_SCALE = 2;   
 
         // --- Init ---
-        window.addEventListener('load', function() {
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-            
+        // Grab canvas references and build the UI as soon as the DOM is parsed.
+        // Previously this all waited for window 'load' (fonts and CDN scripts), so a
+        // tab or button clicked before then called resizeCanvas() etc. while
+        // mainCanvas was still unset, throwing "Cannot read properties of ... (reading 'parentElement')".
+        let appReady = false;
+        function initApp() {
+            if (appReady) return;
             mainCanvas = document.getElementById('tegCanvas');
-            mainCtx = mainCanvas.getContext('2d');
-            
             anatomyCanvas = document.getElementById('anatomyCanvas');
-            anatomyCtx = anatomyCanvas.getContext('2d');
-            
             physicsCanvas = document.getElementById('physicsCanvas');
+            if (!mainCanvas || !anatomyCanvas || !physicsCanvas) return;
+            appReady = true;
+
+            mainCtx = mainCanvas.getContext('2d');
+            anatomyCtx = anatomyCanvas.getContext('2d');
             physicsCtx = physicsCanvas.getContext('2d');
             
             setupUI();
@@ -520,6 +525,19 @@
             // Start Loops
             requestAnimationFrame(animateAnatomyLoop);
             requestAnimationFrame(animatePhysicsLoop);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+
+        window.addEventListener('load', function() {
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            initApp();
+            // Re-measure once fonts and styles have fully loaded
+            resizeCanvas();
         });
 
         // --- Advanced Physics Simulation (Top Down) ---
@@ -547,7 +565,7 @@
         }));
 
         function animatePhysicsLoop() {
-            if (currentMode !== 'learn') {
+            if (currentMode !== 'learn' || !physicsCanvas || !physicsCanvas.parentElement) {
                 requestAnimationFrame(animatePhysicsLoop);
                 return;
             }
@@ -721,7 +739,7 @@
 
         // --- Anatomy Animation Loop (Corrected Coords) ---
         function animateAnatomyLoop() {
-            if (currentMode !== 'learn') {
+            if (currentMode !== 'learn' || !anatomyCanvas || !anatomyCanvas.parentElement) {
                 requestAnimationFrame(animateAnatomyLoop);
                 return;
             }
@@ -1100,7 +1118,7 @@
         }
 
         function startAnimation() {
-            if (isRunning) return;
+            if (isRunning || !mainCtx) return;
             isRunning = true;
             const speedMultiplier = parseFloat(document.getElementById('speedSelect').value);
             let lastFrameTime = performance.now();
@@ -1127,10 +1145,11 @@
             currentTime = 0;
             activeHighlight = null;
             document.getElementById('timeDisplay').textContent = "0.0";
-            drawFrame(mainCtx, mainCanvas.width, mainCanvas.height, currentParams, 0, true);
+            if (mainCtx) drawFrame(mainCtx, mainCanvas.width, mainCanvas.height, currentParams, 0, true);
         }
 
         function resizeCanvas() {
+            if (!mainCanvas || !mainCanvas.parentElement) return;
             const parent = mainCanvas.parentElement;
             mainCanvas.width = parent.clientWidth;
             mainCanvas.height = parent.clientHeight;
